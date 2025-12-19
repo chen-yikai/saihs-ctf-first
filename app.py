@@ -1,6 +1,7 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
 import os
+
+from flask import Flask, jsonify, request
+from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
@@ -41,4 +42,4 @@ def claim():
         return jsonify({'ok': False, 'error': 'not enough'}), 200
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=PORT, debug=False)
+    app.run(host='127.0.0.1', port=PORT, debug=False)
