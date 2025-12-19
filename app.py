@@ -42,4 +42,4 @@ def claim():
         return jsonify({'ok': False, 'error': 'not enough'}), 200
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=PORT, debug=False)
+    app.run(host='saihs-ctf-first-try.zeabur.app', port=PORT, debug=False)
