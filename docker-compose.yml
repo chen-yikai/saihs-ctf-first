@@ -1,8 +1,5 @@
-version: '3.8'
-
 services:
-  ctf-server:
+  app:
     build: .
     ports:
-      - "5000:3000"
-    restart: unless-stopped
+      - "3000:3000"
