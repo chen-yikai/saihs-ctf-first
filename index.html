@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>家豪 手速測試</title>
+  <style>
+    body{
+      font-family: system-ui, Arial;
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      text-align:center;
+      padding:24px;
+
+      background-image:url("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSruvcDt3W9Nv0555UYtqv1JhezQRRQvgqqig&s");
+      background-size:cover;
+      background-position:center;
+      background-repeat:no-repeat;
+    }
+    .overlay{
+      position:fixed; inset:0;
+      background:rgba(0,0,0,0.25);
+      pointer-events:none;
+    }
+    .box{
+      width:min(560px,92vw);
+      background:rgba(255,255,255,0.88);
+      border:1px solid rgba(0,0,0,0.12);
+      border-radius:14px;
+      padding:18px;
+      box-shadow:0 10px 30px rgba(0,0,0,0.2);
+      backdrop-filter: blur(4px);
+    }
+    .muted{ color:#555; margin-top:6px; }
+    .big{ font-size:26px; font-weight:800; }
+    .btns{
+      display:flex;
+      justify-content:center;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:12px;
+    }
+    button{
+      padding:10px 14px;
+      font-size:16px;
+      cursor:pointer;
+    }
+    #result{ margin-top:14px; min-height:1.5em; }
+  </style>
+</head>
+<body>
+  <div class="overlay"></div>
+
+  <div class="box">
+    <h2>目標：1 分鐘內點到 100,000,000</h2>
+    <p class="muted">try /gay.html</p>
+
+    <p>剩餘時間：<span id="timeLeft" class="big">60</span> 秒</p>
+    <p>目前分數：<span id="score" class="big">0</span></p>
+
+    <div class="btns">
+      <button id="startBtn" type="button">開始</button>
+      <button id="clickBtn" type="button" disabled>點我</button>
+      <button id="resetBtn" type="button">重置</button>
+    </div>
+
+    <p id="result" class="big"></p>
+
+    不要當腳本小子
+    <span id="inc" style="display:none">1</span>
+  </div>
+
+  <script>
+    // ✅ API 連結（完整 URL）
+    const API_URL = "http://127.0.0.1:3000/api/claim";
+
+    const TARGET = 100000000;
+    const TIME_LIMIT = 60;
+
+    let score = 0;
+    let running = false;
+    let endTime = 0;
+    let timer = null;
+    let INC = 1;
+
+    const scoreEl = document.getElementById("score");
+    const timeEl = document.getElementById("timeLeft");
+    const resultEl = document.getElementById("result");
+    const incEl = document.getElementById("inc");
+
+    const startBtn = document.getElementById("startBtn");
+    const clickBtn = document.getElementById("clickBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    function setScore(v){ score = v; scoreEl.textContent = String(v); }
+    function setTime(v){ timeEl.textContent = String(v); }
+    function stopTimer(){ if(timer) clearInterval(timer); timer = null; }
+
+    // ✅ DOM → JS 同步：改 Elements 會回寫到變數
+    new MutationObserver(() => {
+      const v = Number(scoreEl.textContent);
+      if (Number.isFinite(v)) {
+        score = v;
+        if (score >= TARGET) claimFlag();
+      }
+    }).observe(scoreEl, { childList:true, characterData:true, subtree:true });
+
+    new MutationObserver(() => {
+      const v = Number(incEl.textContent);
+      if (Number.isFinite(v)) INC = v;
+    }).observe(incEl, { childList:true, characterData:true, subtree:true });
+
+    function tick(){
+      const left = Math.ceil((endTime - Date.now()) / 1000);
+      const leftSec = Math.max(0, left);
+      setTime(leftSec);
+
+      if(leftSec <= 0){
+        stopTimer();
+        running = false;
+        clickBtn.disabled = true;
+        startBtn.disabled = false;
+        if(score < TARGET) resultEl.textContent = "❌ 手速不夠快阿寶貝，看我把你送去成都";
+      }
+    }
+
+    async function claimFlag(){
+      if(!running) return;
+
+      try{
+        const r = await fetch(API_URL, {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({ score, timeLeft: Number(timeEl.textContent) })
+        });
+
+        const data = await r.json();
+
+        if(data.ok){
+          resultEl.textContent = "✅ " + data.flag;
+          running = false;
+          stopTimer();
+          clickBtn.disabled = true;
+          startBtn.disabled = false;
+        } else {
+          resultEl.textContent = "❌ " + (data.error || "not enough");
+        }
+      } catch(e){
+        console.error(e);
+        resultEl.textContent = "❌ 伺服器被草爛了";
+      }
+    }
+
+    startBtn.onclick = () => {
+      resultEl.textContent = "";
+      setScore(0);
+      setTime(TIME_LIMIT);
+
+      running = true;
+      clickBtn.disabled = false;
+      startBtn.disabled = true;
+
+      endTime = Date.now() + TIME_LIMIT * 1000;
+      stopTimer();
+      timer = setInterval(tick, 100);
+      tick();
+    };
+
+    clickBtn.onclick = () => {
+      if(!running) return;
+      setScore(score + INC);
+      if(score >= TARGET) claimFlag();
+    };
+
+    resetBtn.onclick = () => {
+      running = false;
+      stopTimer();
+      setScore(0);
+      setTime(TIME_LIMIT);
+      resultEl.textContent = "";
+      clickBtn.disabled = true;
+      startBtn.disabled = false;
+    };
+  </script>
+</body>
+</html>
